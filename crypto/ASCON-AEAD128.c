@@ -59,7 +59,7 @@ void Ascon_p(uint64_t s[5], unsigned rnd)
 }
 
 void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
-    unsigned plen, uint64_t *c, uint64_t tag[2])
+    unsigned plen, uint64_t *c, uint64_t tag[2]) // TODO clen? -- plen = clen -- make plen a pointer.
 {
     uint64_t s[5] = { 0 };
     
@@ -78,7 +78,8 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
     s[3] ^= key[0];
     s[4] ^= key[1];
 
-    // ASSOCIATED DATA START
+    // ASSOCIATED DATA START'
+    // TODO Associated data is not implemented right now.
     // "metadata". probably cbor or something
 
     if (adlen > 0)
@@ -107,11 +108,13 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
     // TODO: ignore padding when decrypting
     if (plen % 2 != 0) 
     {
-        p[plen] = 0; // [plen++] ?
+        p[plen] = 0;
         plen++;
     }
 
     // #24
+    // TODO handle s.t. blocks are always proper size.... to ignore the C^{~}[n] cases
+    // or maybe this just causes noise and is handled later
     for (unsigned i = 0; i < plen / 2; i++)
     {
         s[0] ^= p[2 * i];
@@ -122,18 +125,6 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
 
         Ascon_p(s, 8);
     }
-
-    // TODO pad is used for last block, pad 1. #27
-
-    c[plen-];
-    
-
-
-
-
-    // parse plaintext into P [n]
-    // l = sizeof(p[n])
-
     // PLAINTEXT END
 
     // FINALIZATION START
@@ -146,12 +137,15 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
 
     Ascon_p(s, 12);
 
-    tag[0] = s[0] ^ key[0];
-    tag[1] = s[1] ^ key[1];
+    tag[0] = s[3] ^ key[0];
+    tag[1] = s[4] ^ key[1];
     // FINALIZATION END
 }
 
-// void decrypt - DROP PLAINTEXT PADDING !!!!!
+void decrypt()
+{
+    
+}
 
 
 int main(void)
