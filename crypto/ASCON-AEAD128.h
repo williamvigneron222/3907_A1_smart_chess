@@ -1,6 +1,6 @@
 /**
  * Implementation of NIST SP 800-232 "ASCON-AEAD128" using 64-bit unsigned integers
- * 
+ *
  *  https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-232.pdf
 */
 
@@ -78,6 +78,7 @@ void sbox(uint64_t s[5]);
 void Ascon_p(uint64_t s[5], unsigned rnd);
 
 
-void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *associatedData, uint64_t *plaintext);
+void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+    unsigned plen, uint64_t *c, uint64_t tag[2]);
 
 // void decrypt
