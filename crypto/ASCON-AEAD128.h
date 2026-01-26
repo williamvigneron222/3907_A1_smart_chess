@@ -77,8 +77,32 @@ void sbox(uint64_t s[5]);
  */
 void Ascon_p(uint64_t s[5], unsigned rnd);
 
-
+/**
+ * Encrypts a plaintext
+ * 
+ * @param key 128-bit key
+ * @param nonce 128-bit nonce
+ * @param ad Associated data (UNUSED)
+ * @param adlen Associated data length (UNUSED)
+ * @param p plaintext array
+ * @param plen plaintext/ciphertext array length
+ * @param c cipphertext buffer (will be same length as @param plen)
+ * @param tag 128-bit tag
+ */
 void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2]);
 
-// void decrypt
+/**
+ * Decrypts a ciphertext
+ * 
+ * @param key 128-bit key
+ * @param nonce 128-bit nonce
+ * @param ad Associated data (UNUSED)
+ * @param adlen Associated data length (UNUSED)
+ * @param p plaintext buffer (will be same length as @param plen)
+ * @param plen plaintext/ciphertext array length
+ * @param c cipphertext array 
+ * @param tag 128-bit tag
+ */
+void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+    unsigned plen, uint64_t *c, uint64_t tag[2]);

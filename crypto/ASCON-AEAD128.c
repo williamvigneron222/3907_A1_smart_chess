@@ -59,81 +59,52 @@ void Ascon_p(uint64_t s[5], unsigned rnd)
 }
 
 void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
-    unsigned plen, uint64_t *c, uint64_t tag[2]) // TODO clen? -- plen = clen -- make plen a pointer.
+    unsigned plen, uint64_t *c, uint64_t tag[2])
 {
+    // INITIALIZATION START
     uint64_t s[5] = { 0 };
-    
-    // Initial population of the state bits
-    // #15
+
     s[0] = IV;
     s[1] = key[0];
     s[2] = key[1];
     s[3] = nonce[0];
     s[4] = nonce[1];
 
-    // #16
     Ascon_p(s, 12);
 
-    // #17
     s[3] ^= key[0];
     s[4] ^= key[1];
 
-    // ASSOCIATED DATA START'
-    // TODO Associated data is not implemented right now.
-    // "metadata". probably cbor or something
+    // INITIALIZATION END
 
-    if (adlen > 0)
-    {
-        // process associatedData (into "A")
-        // pad associatedData[-1] with 128
-        // for (unsigned i = 0; i < array len associatedData i++)
-        {
-            /// s[0] = first half of A
-            /// s[1] = second half of A
-            Ascon_p(s, 8);
-        }
-    }
-
-    // #22
-    s[4] ^= 1;
-    // ASSOCIATED DATA END
+    // AD START
+    // AD END
 
     // PLAINTEXT START
 
     // 64-bit array elements, so there are plen/2 128-bit blocks
-    // #23
-    int blocks = plen / 2;
-
-    // pad last block (whatever)
-    // TODO: ignore padding when decrypting
+    // TODO this can be bitwise operation - round up to an even number
     if (plen % 2 != 0) 
     {
         p[plen] = 0;
         plen++;
     }
 
-    // #24
-    // TODO handle s.t. blocks are always proper size.... to ignore the C^{~}[n] cases
-    // or maybe this just causes noise and is handled later
     for (unsigned i = 0; i < plen / 2; i++)
     {
         s[0] ^= p[2 * i];
         s[1] ^= p[2 * i + 1];
 
-        c[0] = s[0];
-        c[1] = s[1];
+        c[2 * i] = s[0];
+        c[2 * i + 1] = s[1];
 
         Ascon_p(s, 8);
     }
     // PLAINTEXT END
 
     // FINALIZATION START
-
-    s[0] = 0;
-    s[1] = 0;
-    s[2] = key[0];
-    s[3] = key[1];
-    s[4] = 0;
+    s[2] ^= key[0];
+    s[3] ^= key[1];
 
     Ascon_p(s, 12);
 
@@ -142,26 +113,94 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
     // FINALIZATION END
 }
 
-void decrypt()
+void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+    unsigned plen, uint64_t *c, uint64_t tag[2])
 {
+    // INITIALIZATION START
+    uint64_t s[5] = { 0 };
     
+    s[0] = IV;
+    s[1] = key[0];
+    s[2] = key[1];
+    s[3] = nonce[0];
+    s[4] = nonce[1];
+
+    Ascon_p(s, 12);
+
+    s[3] ^= key[0];
+    s[4] ^= key[1];
+    // INITIALIZATION END
+
+    // ASSOCIATED DATA START
+    // ASSOCIATED DATA END
+
+    // CIPHERTEXT START
+    for (unsigned i = 0; i < plen / 2; i++)
+    {
+        p[2 * i] = s[0] ^ c[2 * i];
+        p[2 * i + 1] = s[1] ^ c[2 * i + 1];
+
+        s[0] = c[2 * i];
+        s[1] = c[2 * i + 1];
+
+        Ascon_p(s, 8);
+    }
+    // CIPHERTEXT END
+
+    // FINALIZATION START
+    s[2] ^= key[0];
+    s[3] ^= key[1];
+
+    Ascon_p(s, 12);
+
+    tag[0] = s[3] ^ key[0];
+    tag[1] = s[4] ^ key[1];
+    // FINALIZATION END
 }
 
 
 int main(void)
 {
-    uint64_t test[5] = { 0 };
-    test[0] = IV;
+    uint64_t key[2] = { 0, 0 };
+    uint64_t nonce[2] = { 0, 0 };
+    uint64_t plaintext[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 };
+    unsigned plen = 17;
 
-    for (unsigned i = 0; i < 5; i++)
+    uint64_t ciphertext[17] = { 0 };
+
+    uint64_t tag[2] = { 0 };
+
+    encrypt(key, nonce, NULL, 0, plaintext, plen, ciphertext, tag);
+
+    printf("Plaintext:\r\n");
+    for (unsigned i = 0; i < plen; i++)
     {
-        printf("0x%016I64x\n", test[i]);
+        printf("%d: %016I64x\r\n", i, plaintext[i]);
     }
 
-    Ascon_p(test, 12);
-
-    for (unsigned i = 0; i < 5; i++)
+    printf("Ciphertext:\r\n");
+    for (unsigned i = 0; i < plen; i++)
     {
-        printf("0x%016I64x\n", test[i]);
+        printf("%d: %016I64x\r\n", i, ciphertext[i]);
+    }
+
+    printf("tag:\r\n");
+    for(unsigned i = 0; i < 2; i++)
+    {
+        printf("%d: %016I64x\r\n", i, tag[i]);
+    }
+
+    decrypt(key, nonce, NULL, 0, plaintext, plen, ciphertext, tag);
+
+    printf("Plaintext:\r\n");
+    for (unsigned i = 0; i < plen; i++)
+    {
+        printf("%d: %016I64x\r\n", i, plaintext[i]);
+    }
+
+     printf("tag:\r\n");
+    for(unsigned i = 0; i < 2; i++)
+    {
+        printf("%d: %016I64x\r\n", i, tag[i]);
     }
 }
