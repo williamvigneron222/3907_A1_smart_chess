@@ -14,7 +14,9 @@
 // Global Constants
 /////////////////////////
 
-const uint64_t IV = 0x00001000808c0001;
+const uint64_t AEAD_IV = 0x00001000808c0001;
+
+const uint64_t HASH_IV = 0x0000080100cc0002;
 
 const uint64_t roundConstants[16] = {
     0x000000000000003c,
@@ -86,7 +88,7 @@ void Ascon_p(uint64_t s[5], unsigned rnd);
  * @param adlen Associated data length (UNUSED)
  * @param p plaintext array
  * @param plen plaintext/ciphertext array length
- * @param c cipphertext buffer (will be same length as @param plen)
+ * @param c ciphertext buffer
  * @param tag 128-bit tag
  */
 void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
@@ -99,9 +101,9 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
  * @param nonce 128-bit nonce
  * @param ad Associated data (UNUSED)
  * @param adlen Associated data length (UNUSED)
- * @param p plaintext buffer (will be same length as @param plen)
+ * @param p plaintext buffer
  * @param plen plaintext/ciphertext array length
- * @param c cipphertext array 
+ * @param c ciphertext array 
  * @param tag 128-bit tag
  */
 void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 

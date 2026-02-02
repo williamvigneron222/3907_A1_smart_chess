@@ -1,0 +1,107 @@
+% \documentclass{article}
+% \usepackage{tikz, pgfplots}
+% \usetikzlibrary{positioning, shapes.geometric, arrows}
+
+
+% \begin{document}
+% % https://faculty.washington.edu/chx/project/latex/block_diagram_in_latex.pdf
+% % https://tex.stackexchange.com/questions/11866/compile-a-latex-document-into-a-png-image-thats-as-short-as-possible#11880
+
+% \begin{tikzpicture}
+% \draw (0,0) rectangle (1, 1);
+% \end{tikzpicture}
+
+% \end{document}
+
+% Source - https://tex.stackexchange.com/a/175979
+% Posted by Jesse, modified by community. See post 'Timeline' for change history
+% Retrieved 2026-02-01, License - CC BY-SA 3.0
+
+\documentclass[margin=10pt]{standalone}
+\usepackage{tikz}
+\usepackage[dvipsnames]{xcolor}
+\usetikzlibrary{shapes,arrows,positioning,calc}
+
+\begin{document}
+
+\tikzset{
+block/.style = {draw, fill=white, rectangle, minimum height=3em, minimum width=3em},
+tmp/.style  = {coordinate}, 
+sum/.style= {draw, fill=white, circle, node distance=1cm},
+input/.style = {coordinate},
+output/.style= {coordinate},
+pinstyle/.style = {pin edge={to-,thin,black}
+}
+}
+
+
+
+%\begin{figure}[!htb]
+%\centering
+\begin{tikzpicture}[auto, node distance=2cm,>=latex']
+%     \node [input, name=rinput] (rinput) {};
+%     \node [sum, right of=rinput] (sum1) {};
+%     \node [block, right of=sum1] (controller) {$k_{p\beta}$};
+%     \node [block, above of=controller,node distance=1.3cm] (up){$\frac{k_{i\beta}}{s}$};
+%     \node [block, below of=controller,node distance=1.3cm] (rate) {$sk_{d\beta}$};
+%     \node [sum, right of=controller,node distance=2cm] (sum2) {};
+%     \node [block, above = 2cm of sum2](extra){$\frac{1}{\alpha_{\beta2}}$};  %
+%     \node [block, right of=sum2,node distance=2cm] (system) 
+% {$\frac{a_{\beta 2}}{s+a_{\beta 1}}$};
+%     \node [output, right of=system, node distance=2cm] (output) {};
+%     \node [tmp, below of=controller] (tmp1){$H(s)$};
+%     \draw [->] (rinput) -- node{$R(s)$} (sum1);
+%     \draw [->] (sum1) --node[name=z,anchor=north]{$E(s)$} (controller);
+%     \draw [->] (controller) -- (sum2);
+%     \draw [->] (sum2) -- node{$U(s)$} (system);
+%     \draw [->] (system) -- node [name=y] {$Y(s)$}(output);
+%     \draw [->] (z) |- (rate);
+%     \draw [->] (rate) -| (sum2);
+%     \draw [->] (z) |- (up);
+%     \draw [->] (up) -| (sum2);
+%     \draw [->] (y) |- (tmp1)-| node[pos=0.99] {$-$} (sum1);
+%     \draw [->] (extra)--(sum2);
+%     \draw [->] ($(0,1.5cm)+(extra)$)node[above]{$d_{\beta 2}$} -- (extra);
+
+    % \node [input, name=voice, fill=red] (voice) {};
+    \node [block, fill=Magenta] (mic){Microphone};
+    \node [block, below of=mic, node distance=2.5cm, fill=SeaGreen] (amp){Amplifier};
+    \node [block, right of=amp, fill=SeaGreen] (filter){Filter};
+    \node [block, right of=filter, fill=SeaGreen] (esp){ESP32};
+    \node [block, above of=esp, fill=Magenta] (btn){Button};
+    \node [block, below of=esp, fill=SeaGreen] (hrng){HRNG};
+
+    \node [block, right of=esp, node distance=2.5cm, fill=SeaGreen] (rpi){Raspberry Pi};
+    \node [block, above of=rpi, fill=Magenta] (ir){IR trasceiver};
+    \node [block, right of=rpi, node distance=2.5cm, fill=lightgray] (spkr){Speaker};
+
+    % software
+    \node [block, right of=hrng, fill=ProcessBlue] (crypto){Encryption};
+    \node [block, below of=spkr, fill=ProcessBlue] (sp){Signal Processing};
+
+
+    % \draw [->] (voice) -- node{audio} (mic);
+    \draw [->] (mic) -- (amp);
+    \draw [->] (amp) -- (filter);
+    \draw [->] (filter) -- (esp);
+    \draw [->] (btn) -- (esp);
+    \draw [->] (esp) -- (rpi);
+    \draw [->] (ir) -- (rpi);
+    \draw [->] (rpi) -- (spkr);
+
+    \draw [->] (esp) -- (hrng);
+
+    \draw [->] (hrng) -- (crypto);
+    \draw [->] (rpi) -- (crypto);
+    \draw [->] (crypto) -- (rpi);
+    \draw [->] (rpi) -- (sp);
+    \draw [->] (sp) -- (rpi);
+
+    % \draw [->] (mic) --node[name=z,anchor=north]{Amplified\\Audio} (amp);
+
+
+\end{tikzpicture}
+%\caption{A PID Control System} \label{fig6_10}
+%\end{figure}
+
+\end{document}

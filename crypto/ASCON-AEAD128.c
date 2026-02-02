@@ -64,7 +64,7 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
     // INITIALIZATION START
     uint64_t s[5] = { 0 };
 
-    s[0] = IV;
+    s[0] = AEAD_IV;
     s[1] = key[0];
     s[2] = key[1];
     s[3] = nonce[0];
@@ -119,7 +119,7 @@ void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
     // INITIALIZATION START
     uint64_t s[5] = { 0 };
     
-    s[0] = IV;
+    s[0] = AEAD_IV;
     s[1] = key[0];
     s[2] = key[1];
     s[3] = nonce[0];
