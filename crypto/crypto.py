@@ -19,7 +19,7 @@ Uint64Array2 = c_uint64 * 2
 
 key = Uint64Array2(0, 0)
 nonce = Uint64Array2(0, 0)
-tag = Uint64Array2(0, 0);
+tag = Uint64Array2(0, 0)
 
 def setKey():
 	key[0] = 0
