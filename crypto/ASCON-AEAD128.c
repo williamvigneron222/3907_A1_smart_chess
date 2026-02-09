@@ -6,7 +6,7 @@
 
 #include <stdio.h>
 
-#include "ASCON-AEAD128.h"
+#include "ASCON.h"
 
 
 void parse(uint64_t *x, unsigned size, unsigned r) // todo pass sizeof(x)
@@ -159,6 +159,9 @@ void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
 }
 
 
+
+// TODO
+// This is a temporary test to verify enrcyption/decryption works.
 int main(void)
 {
     uint64_t key[2] = { 0, 0 };

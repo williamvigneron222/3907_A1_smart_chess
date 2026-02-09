@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "ASCON-AEAD128.h"
+#include "ASCON.h"
 
 void hash(uint64_t *m, unsigned mlen, uint64_t h[4])
 {
