@@ -1,4 +1,3 @@
-#include <arduino.h>
 #include "driver/i2s.h"
 #include "driver/adc.h"
 
@@ -66,6 +65,21 @@ static void setup_i2s_adc() {
   i2s_adc_enable(I2S_PORT);
 }
 
+void encrypt_block(const uint8_t* data, size_t len) {
+  Serial.println("---- BLOCK START ----");
+
+  for (size_t i = 0; i < len; i++) {
+    if (data[i] < 0x10) Serial.print("0");
+    Serial.print(data[i], HEX);
+    Serial.print(" ");
+
+    if ((i + 1) % 16 == 0) Serial.println();
+  }
+
+  Serial.println("\n---- BLOCK END ----\n");
+}
+
+
 void setup() {
   Serial.begin(115200);
   delay(200);
@@ -84,7 +98,7 @@ void loop() {
 
   size_t samples_read = bytes_read / sizeof(uint16_t);
 
-  // Pack into encryption-sized blocks
+// Pack into encryption-sized blocks
   for (size_t i = 0; i < samples_read; i++) {
     int16_t pcm = adc12_to_pcm16(raw[i]);
 
@@ -92,11 +106,12 @@ void loop() {
     block[block_index++] = (uint8_t)(pcm & 0xFF);
     block[block_index++] = (uint8_t)((pcm >> 8) & 0xFF);
 
-    // If block filled, hand it to encryption
+    // IF BLOCK IS FULL → SEND TO "ENCRYPTION"
     if (block_index >= BLOCK_BYTES) {
       encrypt_block(block, BLOCK_BYTES);
-      block_index = 0;
+      block_index = 0;                   
     }
   }
+
 }
 
