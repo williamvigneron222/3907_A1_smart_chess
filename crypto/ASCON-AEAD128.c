@@ -9,7 +9,7 @@
 #include "ASCON-AEAD128.h"
 
 
-void parse(uint64_t *x, unsigned size, unsigned r) // todo pass sizeoof(x)
+void parse(uint64_t *x, unsigned size, unsigned r) // todo pass sizeof(x)
 {
     unsigned l = size / r; // c truncates integer division, so the value is essentially floored.
     for (unsigned i = 0; i < (l-1); i++)
