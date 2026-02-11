@@ -1,3 +1,4 @@
 .vscode/
-crypto/ASCON-AEAD128.exe
+crypto/*.exe
+crypto/*.so
 real_time_communication/.idea/

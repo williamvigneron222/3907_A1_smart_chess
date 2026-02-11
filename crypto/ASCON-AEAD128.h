@@ -4,21 +4,21 @@
  *  https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-232.pdf
 */
 
+#ifndef ASCON_AEAD128_H
+#define ASCON_AEAD128_H
+
 #include <stdint.h> // uint64_t
 
 // Right Rotate uint64_t x by i bits
 #define ROTR(x, i) (x>>i)^(x<<64-i)
 
-
 /////////////////////////
 // Global Constants
 /////////////////////////
 
-const uint64_t AEAD_IV = 0x00001000808c0001;
+static const uint64_t AEAD_IV = 0x00001000808c0001;
 
-const uint64_t HASH_IV = 0x0000080100cc0002;
-
-const uint64_t roundConstants[16] = {
+static const uint64_t roundConstants[16] = {
     0x000000000000003c,
     0x000000000000002d,
     0x000000000000001e,
@@ -108,3 +108,6 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
  */
 void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2]);
+
+
+#endif /// ASCON_AEAD128_H
