@@ -28,9 +28,17 @@ static size_t   block_index = 0;        // current fill position in block[]
 
 // Convert 12-bit ADC sample (0..4095) -> signed-ish 16-bit PCM (-32768..32767-ish)
 static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
-  uint16_t adc12 = adc_word & 0x0FFF;     // ensures first 4 bits are 0
-  int32_t centered = (int32_t)adc12 - 2048; // center around 0
-  return (int16_t)(centered << 4);        // scale 12-bit -> 16-bit range
+  uint16_t adc12 = (adc_word >> 4) & 0x0FFF;
+
+  // --- DC tracking (slow average) ---
+  static int32_t dc = 2048;               // initial midpoint guess
+  dc = (dc * 255 + adc12) / 256;         
+
+  // Remove DC offset
+  int32_t centered = (int32_t)adc12 - dc;
+
+  // Scale 12-bit range to 16-bit range
+  return (int16_t)(centered << 4);       // scale 12-bit -> 16-bit range
 }
 
 static void setup_i2s_adc() {
@@ -66,28 +74,16 @@ static void setup_i2s_adc() {
 }
 
 void encrypt_block(const uint8_t* data, size_t len) {
-  Serial.println("---- BLOCK START ----");
-
-  for (size_t i = 0; i < len; i++) {
-    if (data[i] < 0x10) Serial.print("0");
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
-
-    if ((i + 1) % 16 == 0) Serial.println();
-  }
-
-  Serial.println("\n---- BLOCK END ----\n");
+  
 }
 
 
 void setup() {
   Serial.begin(115200);
   delay(200);
-  Serial.println("Starting ADC->I2S audio capture...");
 
   setup_i2s_adc();
 
-  Serial.println("Capture running. Blocks will be produced continuously.");
 }
 
 void loop() {
@@ -97,20 +93,26 @@ void loop() {
   if (err != ESP_OK) return;
 
   size_t samples_read = bytes_read / sizeof(uint16_t);
+  static uint32_t decim = 0;
 
 // Pack into encryption-sized blocks
   for (size_t i = 0; i < samples_read; i++) {
     int16_t pcm = adc12_to_pcm16(raw[i]);
-
-    // Pack int16 into 2 bytes (little-endian)
-    block[block_index++] = (uint8_t)(pcm & 0xFF);
-    block[block_index++] = (uint8_t)((pcm >> 8) & 0xFF);
-
-    // IF BLOCK IS FULL → SEND TO "ENCRYPTION"
-    if (block_index >= BLOCK_BYTES) {
-      encrypt_block(block, BLOCK_BYTES);
-      block_index = 0;                   
+    
+    decim++;
+    if ((decim & 0x0F) == 0) {   // every 16 samples
+      Serial.println(pcm);
     }
+
+    // // Pack int16 into 2 bytes (little-endian)
+    // block[block_index++] = (uint8_t)(pcm & 0xFF);
+    // block[block_index++] = (uint8_t)((pcm >> 8) & 0xFF);
+
+    // // IF BLOCK IS FULL → SEND TO "ENCRYPTION"
+    // if (block_index >= BLOCK_BYTES) {
+    //   encrypt_block(block, BLOCK_BYTES);
+    //   block_index = 0;                   
+    // }
   }
 
 }
