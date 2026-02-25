@@ -1,3 +1,5 @@
+// #include <Preferences.h>
+
 #include "keyGen.h"
 #include "ASCON-HASH256.h"
 
@@ -18,4 +20,21 @@ void generate(uint64_t b[2])
 
     b[0] = u[0] ^ v[0];
     b[1] = u[1] ^ v[1];
+}
+
+
+void getKey(uint64_t b[2])
+{
+    // need preferences library
+    // preferences retrieve key using keyname
+}
+
+void newKey()
+{
+    // need preferences library
+
+    uint64_t b[2] = { 0 };
+    // generate(b);
+    // preferences store uint64 b[0]
+    // preferences store uint64 b[1];
 }
