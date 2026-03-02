@@ -8,7 +8,7 @@ static const i2s_port_t I2S_PORT = I2S_NUM_0;
 static const adc1_channel_t ADC_CH = ADC1_CHANNEL_6;  // ADC1_CH6 = GPIO34 (common)
 
 // Sample rate for audio capture
-static const uint32_t SAMPLE_RATE = 16000;
+static const uint32_t SAMPLE_RATE = 64000;
 
 // Encryption input block size in BYTES
 static const size_t BLOCK_BYTES = 512; // e.g., 512 bytes per block (multiple of 16)
@@ -29,14 +29,18 @@ static size_t   block_index = 0;        // current fill position in block[]
 // Convert 12-bit ADC sample (0..4095) -> signed-ish 16-bit PCM (-32768..32767-ish)
 static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   uint16_t adc12 = (adc_word) & 0x0FFF;
+  static int32_t y  = 0;
 
-  static int32_t dc = 1970;               // initial midpoint guess       
+  // --- DC tracking (slow average) ---
+  static int32_t dc = 1970;               // initial midpoint guess
+  //dc = (dc * 255 + adc12) / 256;         
 
   // Remove DC offset
   int32_t centered = (int32_t)adc12 - dc;
-
-  // Scale 12-bit range to 16-bit range
-  return (int16_t)(centered << 4);       // scale 12-bit -> 16-bit range
+  // y = (y * 15 + centered) / 16; // alpha = 0.9375
+  // int32_t pcm32 = y << 4;
+  // return (int16_t)pcm32;       // scale 12-bit -> 16-bit range
+  return (int16_t)centered << 4;
 }
 
 static inline int16_t median3(int16_t a, int16_t b, int16_t c) {
@@ -56,7 +60,7 @@ static void setup_i2s_adc() {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN),
     .sample_rate = SAMPLE_RATE,
     .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-    .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
     .communication_format = I2S_COMM_FORMAT_I2S_MSB,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
     .dma_buf_count = 8,
@@ -86,27 +90,31 @@ void encrypt_block(const uint8_t* data, size_t len) {
 void setup() {
   Serial.begin(921600);
   delay(200);
-
   setup_i2s_adc();
+
+  // take exactly one block
+  for (int x = 0; x < 4; x++){
+    size_t bytes_read = 0;
+    esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, portMAX_DELAY);
+    if (err != ESP_OK) {
+        Serial.println("i2s_read failed");
+    } else {
+        size_t samples_read = bytes_read / sizeof(uint16_t);
+
+        for (size_t i = 1; i < (samples_read - 6); i++) {
+            int16_t s0 = adc12_to_pcm16(raw[i-1]);
+            int16_t s1 = adc12_to_pcm16(raw[i]);
+            int16_t s2 = adc12_to_pcm16(raw[i+1]);
+
+            int16_t filtered = median3(s0, s1, s2);
+            Serial.println(filtered);   
+        }
+    }
+  }
+  // stop here until reset
+  while (true) { delay(1000); }
 }
 
 void loop() {
-  // Read a chunk of ADC samples from DMA
-  size_t bytes_read = 0;
-  esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, portMAX_DELAY);
-  if (err != ESP_OK) return;
-
-  size_t samples_read = bytes_read / sizeof(uint16_t);
-
-// Pack into encryption-sized blocks
-  for (size_t i = 1; i < (samples_read - 6); i++) {
-    int16_t s0 = adc12_to_pcm16(raw[i-1]);
-    int16_t s1 = adc12_to_pcm16(raw[i]);
-    int16_t s2 = adc12_to_pcm16(raw[i+1]);
-
-    int16_t filtered = median3(s0, s1, s2);
-    Serial.println(filtered);   
-  }
 
 }
-
