@@ -8,7 +8,7 @@ static const i2s_port_t I2S_PORT = I2S_NUM_0;
 static const adc1_channel_t ADC_CH = ADC1_CHANNEL_6;  // ADC1_CH6 = GPIO34 (common)
 
 // Sample rate for audio capture
-static const uint32_t SAMPLE_RATE = 16000;
+static const uint32_t SAMPLE_RATE = 64000;
 
 // Encryption input block size in BYTES
 static const size_t BLOCK_BYTES = 512; // e.g., 512 bytes per block (multiple of 16)
