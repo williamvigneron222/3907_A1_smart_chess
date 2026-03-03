@@ -1,4 +1,4 @@
-// #include <Preferences.h>
+#include "Preferences.h"
 
 #include "keyGen.h"
 #include "ASCON-HASH256.h"
@@ -15,7 +15,8 @@ void generate(uint64_t b[2])
 
     // initialize u & v here:
     // U will call rng, intake 128 bits
-    // V will call rng intake 128 bits then hash
+    // V will call rng intake 128 bits then hash itself
+    // 
 
 
     b[0] = u[0] ^ v[0];
