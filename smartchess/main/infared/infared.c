@@ -3,3 +3,15 @@
 
 
 
+void irSetup()
+{
+    // reciever pin
+    irRxPin = 34;
+    // transmit pin
+	irTxPin = 4;
+}
+
+void irLoop()
+{
+    
+}

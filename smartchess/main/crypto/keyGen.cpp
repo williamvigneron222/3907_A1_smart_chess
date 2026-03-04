@@ -16,9 +16,8 @@ void generate(uint64_t b[2])
     // initialize u & v here:
     // U will call rng, intake 128 bits
     // V will call rng intake 128 bits then hash itself
-    // 
 
-
+    // XOR u and v
     b[0] = u[0] ^ v[0];
     b[1] = u[1] ^ v[1];
 }
