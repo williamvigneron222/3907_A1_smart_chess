@@ -2,7 +2,6 @@
 
 #include "driver/i2s.h"
 #include "driver/adc.h"
-#include "crypto/ASCON-AEAD128.h"
 
 
 // ====== USER SETTINGS ======
@@ -45,7 +44,7 @@ static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   return (int16_t)(centered << 4);       // scale 12-bit -> 16-bit range
 }
 
-static void setup_i2s_adc() {
+void setup_i2s_adc() {
   // 1) Configure ADC
   adc1_config_width(ADC_WIDTH_BIT_12);
   adc1_config_channel_atten(ADC_CH, ADC_ATTEN_DB_11);

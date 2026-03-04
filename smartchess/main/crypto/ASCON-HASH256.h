@@ -6,5 +6,7 @@
 
 static const uint64_t HASH_IV = 0x0000080100cc0002;
 
+void hash(uint64_t *m, unsigned mlen, uint64_t h[4]);
+
 
 #endif /// ASCON_HASH256_H
