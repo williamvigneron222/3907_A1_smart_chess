@@ -1,6 +1,7 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "Arduino.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -89,7 +90,8 @@ static void add_peer_or_die(const uint8_t peer_mac[6])
     ESP_LOGI(TAG, "Peer added");
 }
 
-void app_main(void)
+
+void setup()
 {
     ESP_ERROR_CHECK(nvs_flash_init());
 
@@ -103,6 +105,32 @@ void app_main(void)
     add_peer_or_die(PEER_MAC);
 
     uint32_t counter = 0;
+    // while (1) {
+    //     msg_t msg = { .counter = counter++ };
+    //     esp_err_t err = esp_now_send(PEER_MAC, (uint8_t*)&msg, sizeof(msg));
+    //     if (err != ESP_OK) {
+    //         ESP_LOGE(TAG, "esp_now_send failed: %s", esp_err_to_name(err));
+    //     }
+    //     vTaskDelay(pdMS_TO_TICKS(500));
+    // }
+
+#else
+    ESP_LOGI(TAG, "ROLE = RECEIVER (waiting...)");
+    // while (1) {
+    //     vTaskDelay(pdMS_TO_TICKS(1000));
+    // }
+#endif
+}
+
+void loop()
+{
+    #if ROLE_SENDER
+    // ESP_LOGI(TAG, "ROLE = SENDER");
+
+    // IMPORTANT: set PEER_MAC first (receiver MAC)
+    // add_peer_or_die(PEER_MAC);
+
+    uint32_t counter = 0;
     while (1) {
         msg_t msg = { .counter = counter++ };
         esp_err_t err = esp_now_send(PEER_MAC, (uint8_t*)&msg, sizeof(msg));
@@ -113,9 +141,40 @@ void app_main(void)
     }
 
 #else
-    ESP_LOGI(TAG, "ROLE = RECEIVER (waiting...)");
+    // ESP_LOGI(TAG, "ROLE = RECEIVER (waiting...)");
     while (1) {
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 #endif
 }
+
+// void app_main()
+// {
+//     ESP_ERROR_CHECK(nvs_flash_init());
+
+//     wifi_init_sta();
+//     espnow_init_common();
+
+// #if ROLE_SENDER
+//     ESP_LOGI(TAG, "ROLE = SENDER");
+
+//     // IMPORTANT: set PEER_MAC first (receiver MAC)
+//     add_peer_or_die(PEER_MAC);
+
+//     uint32_t counter = 0;
+//     while (1) {
+//         msg_t msg = { .counter = counter++ };
+//         esp_err_t err = esp_now_send(PEER_MAC, (uint8_t*)&msg, sizeof(msg));
+//         if (err != ESP_OK) {
+//             ESP_LOGE(TAG, "esp_now_send failed: %s", esp_err_to_name(err));
+//         }
+//         vTaskDelay(pdMS_TO_TICKS(500));
+//     }
+
+// #else
+//     ESP_LOGI(TAG, "ROLE = RECEIVER (waiting...)");
+//     while (1) {
+//         vTaskDelay(pdMS_TO_TICKS(1000));
+//     }
+// #endif
+// }
