@@ -18,7 +18,7 @@
 
 
 // Sender must set this to the RECEIVER MAC address printed on the receiver
-static uint8_t PEER_MAC[6] = { 0x00,0x00,0x00,0x00,0x00,0x00 };
+static uint8_t PEER_MAC[6] = { 0x94,0xB9,0x7E,0xE5,0xB7,0xD4 };
 
 static const char *TAG = "ESPNOW_TEST";
 
