@@ -2,9 +2,9 @@
 #include "esp32-rmt-ir.h"
 #include "esp_timer.h"
 
-#include "infared.h"
+#include "infrared.h"
 
-#include "keyGen.h"
+#include "keyGen.h" // getkey()
 
 void irSetup()
 {
@@ -37,6 +37,7 @@ void irLoop()
             // every 2-3 seconds broadcast, otherwise detect
             // if we detect a CMD_INITIATE set state to INITIATE_ACK
             // if we detect a CMD_INITIATE_ACK set state to KEY_SEND
+            
             break;
         case INITIATE_ACK:
             // every 2-3 seconds broadcast an ack

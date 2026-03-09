@@ -1,6 +1,5 @@
-#ifndef INFARED_H
-#define INFARED_H
-
+#ifndef INFRARED_H
+#define INFRARED_H
 
 #include <stdint.h>
 
@@ -21,7 +20,7 @@
 * 
 */
 #define CMD_INITIATE       0b0001   /// header | cmd code | my MAC address
-#define CMD_ACK_INITIATE   0b0010   /// header | cmd code | my MAC address | other MAC address
+#define CMD_INITIATE_ACK   0b0010   /// header | cmd code | my MAC address | other MAC address
 #define CMD_KEY_SEND       0b0100   /// header | cmd code | key // TODO crc check here?
 #define CMD_END            0b1000   /// header | cmd code | 0 (end) 1 (fail)
 
@@ -49,4 +48,4 @@ void irSetup();
 
 void irLoop();
 
-#endif /// INFARED_H
+#endif /// INFRARED_H
