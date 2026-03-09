@@ -82,18 +82,14 @@ static void setup_i2s_adc() {
   i2s_adc_enable(I2S_PORT);
 }
 
-void encrypt_block(const uint8_t* data, size_t len) {
-  
-}
-
 
 void setup() {
   Serial.begin(921600);
   delay(200);
   setup_i2s_adc();
+}
 
-  // take exactly one block
-  for (int x = 0; x < 4; x++){
+void loop() {
     size_t bytes_read = 0;
     esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, portMAX_DELAY);
     if (err != ESP_OK) {
@@ -110,11 +106,4 @@ void setup() {
             Serial.println(filtered);   
         }
     }
-  }
-  // stop here until reset
-  while (true) { delay(1000); }
-}
-
-void loop() {
-
 }
