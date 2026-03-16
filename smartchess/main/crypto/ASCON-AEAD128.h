@@ -10,7 +10,8 @@
 #include <stdint.h> // uint64_t
 
 // Right Rotate uint64_t x by i bits
-#define ROTR(x, i) (x>>i)^(x<<64-i)
+#define ROTR(x, i) (x>>i)^(x<<(64-i))
+
 
 /////////////////////////
 // Global Constants
@@ -91,7 +92,7 @@ void Ascon_p(uint64_t s[5], unsigned rnd);
  * @param c ciphertext buffer
  * @param tag 128-bit tag
  */
-void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+void ascon_encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2]);
 
 /**
@@ -106,7 +107,7 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
  * @param c ciphertext array 
  * @param tag 128-bit tag
  */
-void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+void ascon_decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2]);
 
 

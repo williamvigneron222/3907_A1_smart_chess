@@ -19,7 +19,6 @@ void irSetup()
 
 void irLoop()
 {
-    // maybe implement a timer ? for timing
     // esp_timer_get_time() /// int64_t
     //  esp_err_t esp_timer_start_periodic(esp_timer_handle_t timer, uint64_t period)
 

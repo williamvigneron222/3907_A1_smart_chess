@@ -57,7 +57,7 @@ void Ascon_p(uint64_t s[5], unsigned rnd)
     }
 }
 
-void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+void ascon_encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2])
 {
     // INITIALIZATION START
@@ -112,7 +112,7 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
     // FINALIZATION END
 }
 
-void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+void ascon_decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2])
 {
     // INITIALIZATION START
