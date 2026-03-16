@@ -1,4 +1,8 @@
 #include "keyGen.h"
+
+extern "C" {
+    #include "ASCON-HASH256.h"
+}
 #include "ASCON-HASH256.h"
 
 #include <cstdio>
