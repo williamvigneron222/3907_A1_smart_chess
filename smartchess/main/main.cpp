@@ -4,17 +4,12 @@
 
 
 // #include "adc.h"
-extern "C"
-{
-#include "esp32-rmt-ir.h"
-#include "ASCON-HASH256.h"
-}
-
+#include "infared.h"
 
 void setup()
 {
-    Serial.begin(115200);
-    // irSetup();
+    // Serial.begin(115200); /// IFDEF DEBUG  ?
+    irSetup();
 }
 
 
@@ -24,14 +19,6 @@ void loop()
     uint64_t m[2] = { 0, 1 }; // mlen 2
     hash(m, 2, h);
     //if IR button is held
-        // begin timer 2 seconds
-    // if IR is held > 2 seconds:
-        // irLoop();
-    // else if microphone button is held
-        // adc loop
-
-    // else listen to incoming signals
-
-    //
+        irLoop();
 }
 
