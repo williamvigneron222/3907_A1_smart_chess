@@ -1,4 +1,12 @@
-
-idf_component_register(SRCS "main.cpp" "crypto/ASCON-HASH256.c" "crypto/ASCON-AEAD128.c"
-                    INCLUDE_DIRS "." "crypto" "ir" "ir/esp32-rmt-ir")
-
+idf_component_register(
+    SRCS
+        "communication/main.cpp"
+        "communication/crypto_wrap.cpp"
+        "crypto/ASCON-AEAD128.c"
+        "crypto/ASCON-HASH256.c"
+    INCLUDE_DIRS
+        "."
+        "communication"
+        "crypto"
+        
+)
