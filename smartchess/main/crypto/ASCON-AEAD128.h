@@ -12,6 +12,7 @@
 // Right Rotate uint64_t x by i bits
 #define ROTR(x, i) (((x) >> (i)) ^ ((x) << (64 - (i))))
 
+
 /////////////////////////
 // Global Constants
 /////////////////////////

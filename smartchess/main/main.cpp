@@ -52,7 +52,7 @@ static void increment_nonce()
 
 void setup()
 {
-    Serial.begin(115200); /// IFDEF DEBUG  ?
+    Serial.begin(115200);
     // irSetup();
     delay(1000);
 
