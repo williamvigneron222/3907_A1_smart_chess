@@ -94,4 +94,6 @@ void loop()
     delay(100);
 }
 
+//the code generates the key once and the starting nonce once
+
 

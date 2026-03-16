@@ -10,7 +10,8 @@
 #include <stdint.h> // uint64_t
 
 // Right Rotate uint64_t x by i bits
-#define ROTR(x, i) ((x) >> (i)) ^ ((x) << (64-(i)))
+#define ROTR(x, i) (((x) >> (i)) ^ ((x) << (64 - (i))))
+
 
 /////////////////////////
 // Global Constants
@@ -37,6 +38,10 @@ static const uint64_t roundConstants[16] = {
     0x000000000000005a,
     0x000000000000004b,
 };
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /////////////////////////
 // Function Declarations
@@ -91,7 +96,7 @@ void Ascon_p(uint64_t s[5], unsigned rnd);
  * @param c ciphertext buffer
  * @param tag 128-bit tag
  */
-void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+void ascon_encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2]);
 
 /**
@@ -106,8 +111,11 @@ void encrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, u
  * @param c ciphertext array 
  * @param tag 128-bit tag
  */
-void decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
+void ascon_decrypt(uint64_t key[2], uint64_t nonce[2], uint64_t *ad, unsigned adlen, uint64_t *p, 
     unsigned plen, uint64_t *c, uint64_t tag[2]);
 
+    #ifdef __cplusplus
+}
+#endif
 
 #endif /// ASCON_AEAD128_H
