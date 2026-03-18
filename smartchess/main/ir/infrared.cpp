@@ -1,6 +1,7 @@
 #include "Arduino.h"
-#include "esp32-rmt-ir.h"
+// #include "esp32-rmt-ir.h"
 #include "esp_timer.h"
+#include "IRemote.h"
 
 #include "infrared.h"
 

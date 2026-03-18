@@ -15,10 +15,15 @@ void setup()
 
 void loop()
 {
-    uint64_t h[4] = { 0 };
-    uint64_t m[2] = { 0, 1 }; // mlen 2
-    hash(m, 2, h);
     //if IR button is held
-        irLoop();
+         // begin timer 2 seconds
+     // if IR is held > 2 seconds:
+         // irLoop();
+     // else if microphone button is held
+         // adc loop
+ 
+     // else listen to incoming signals
+ 
+     //
 }
 
