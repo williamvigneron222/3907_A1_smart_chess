@@ -5,10 +5,15 @@
 //#include "infared.h"
 #include "communication.h"
 
-extern "C" void app_main(void)
+void setup()
 {
-    
-
     //irSetup();
     communication_setup();
+}
+
+void loop()
+{
+    //irLoop();
+    communication_loop();
+    delay(10);
 }
