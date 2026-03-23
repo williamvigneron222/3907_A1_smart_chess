@@ -3,6 +3,8 @@
 #include "ASCON-AEAD128.h"
 
 // ====== USER SETTINGS ======
+static const int BTN_PIN = 33;
+
 static const i2s_port_t I2S_PORT = I2S_NUM_0;
 
 // IMPORTANT: use ADC1 (ADC2 conflicts with Wi-Fi)
@@ -76,6 +78,28 @@ void setup() {
   delay(200);
 
   setup_i2s_adc();
+
+  for (int set = 0; set < 4; set++) {
+
+    size_t bytes_read = 0;
+    esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, portMAX_DELAY);
+    if (err != ESP_OK) return;
+
+    size_t samples_read = bytes_read / sizeof(uint16_t);
+
+    for (size_t i = 1; i < samples_read - 1; i++) {
+
+      int16_t s0 = adc12_to_pcm16(raw[i-1]);
+      int16_t s1 = adc12_to_pcm16(raw[i]);
+      int16_t s2 = adc12_to_pcm16(raw[i+1]);
+
+      int16_t filtered = median3(s0, s1, s2);
+
+      Serial.println(filtered);
+    }
+  }
+
+
 }
 
 void loop() {

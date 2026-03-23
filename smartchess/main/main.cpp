@@ -6,6 +6,7 @@
 
 
 // #include "adc.h"
+
 //#include "infrared.h"
 
 //128-bit key (16 bytes)
@@ -95,6 +96,5 @@ void loop()
     delay(100);
 }
 
-//the code generates the key once and the starting nonce once
 
 
