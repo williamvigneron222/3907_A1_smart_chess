@@ -30,7 +30,8 @@ struct AudioBlock {
 // ============================================================
 enum AudioMode {
   MODE_RX,
-  MODE_TX
+  MODE_TX,
+  MODE_PAIR
 };
 
 static volatile AudioMode currentMode = MODE_RX;
@@ -146,23 +147,11 @@ static void stop_i2s_speaker() {
 // Replace these with your real functions
 // ============================================================
 static void send_audio_block(const AudioBlock &blk) {
-  // TODO:
-  // pack -> encrypt -> radio send
-  // For now, just print occasionally
-  static uint32_t n = 0;
-  if ((n++ % 50) == 0) {
-    Serial.printf("[TX] sent block with %u samples\n", (unsigned)blk.count);
-  }
+    //encrypt and send the audio block
 }
 
 static bool receive_audio_block(AudioBlock &blk) {
-  // TODO:
-  // radio receive -> decrypt -> unpack
-  // For now, output silence as placeholder
-  blk.count = AUDIO_SAMPLES;
-  for (size_t i = 0; i < AUDIO_SAMPLES; i++) {
-    blk.samples[i] = 0;
-  }
+  //decrypt incoming block
 
   vTaskDelay(pdMS_TO_TICKS(16)); // roughly one block period
   return true;

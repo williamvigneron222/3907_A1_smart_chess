@@ -65,7 +65,6 @@ void setup() {
   Serial.begin(921600);
   delay(200);
 
-  setup_i2s_adc();
   setup_i2s_speaker();
 }
 
