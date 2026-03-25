@@ -1,5 +1,10 @@
 #include "driver/i2s.h"
 #include "driver/adc.h"
+#include "Arduino.h"
+#include "Preferences.h"
+#include "esp_timer.h" // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html
+#include "keyGen.h"
+#include "clock.h"
 
 // ============================================================
 // SETTINGS
@@ -15,7 +20,10 @@ static const int SPK_BCLK = 26;
 static const int SPK_LRC  = 25;
 static const int SPK_DOUT = 22;
 
-static const int PTT_BUTTON = 33;   // active LOW
+//Key generation settings
+static uint8_t key[16] = {0};
+static uint8_t nonce[16] = {0};
+
 
 // ============================================================
 // AUDIO BLOCK
@@ -62,6 +70,40 @@ static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   if (pcm32 < -32768) pcm32 = -32768;
 
   return (int16_t)pcm32;
+}
+
+//helper function to print bytes in hex form (easy to debug)
+static void print_bytes(const char *label, const uint8_t *data, int len)
+{
+    Serial.print(label);
+
+    for (int i = 0; i < len; i++)
+    {
+        // Add a leading 0 if the byte is less than 0x10
+        if (data[i] < 16)
+        {
+            Serial.print("0");
+        }
+
+        Serial.print(data[i], HEX);
+    }
+
+    Serial.println();
+}
+
+//Helper function to count the 128-bit nonce up by 1
+static void increment_nonce()
+{
+    for (int i = 15; i >= 0; i--)
+    {
+        nonce[i]++;
+
+        // If this byte did not overflow back to 0, stop here
+        if (nonce[i] != 0)
+        {
+            break;
+        }
+    }
 }
 
 // ============================================================
@@ -313,8 +355,6 @@ void setup() {
   Serial.begin(115200);
   delay(500);
 
-  pinMode(PTT_BUTTON, INPUT_PULLUP);
-
   audioQueue = xQueueCreate(AUDIO_QUEUE_LEN, sizeof(AudioBlock));
   if (!audioQueue) {
     Serial.println("Failed to create audio queue");
@@ -323,6 +363,26 @@ void setup() {
 
   // default = RX mode
   start_rx_mode();
+
+  // Clock output for HRNG hardware
+    // Drives the DFF
+  clock_init_default();
+
+    // Setting up the GPIO19 as the random bitstream input
+  keygen_init();
+
+  // Generating the key
+  keygen_generate(key);
+
+  // Setting the nonce to all zeros, resets every boot
+  for (int i = 0; i < 16; i++)
+  {
+      nonce[i] = 0;
+  }
+
+  Serial.println("System initialized.");
+  print_bytes("Generated key:  ", key, 16);
+  print_bytes("Starting nonce: ", nonce, 16);
 }
 
 void loop() {
