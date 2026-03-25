@@ -2,11 +2,13 @@
 #include <cstdint>
 #include <cstddef>
 
-bool ascon_encrypt_bytes(const uint8_t *pt, size_t pt_len, uint16_t seq,
-                         uint8_t nonce_out[16], uint8_t tag_out[16],
-                         uint8_t *ct_out, size_t ct_max, size_t *ct_len_out);
+bool ascon_encrypt_audio(const int16_t *samples, size_t num_samples,
+                         uint16_t seq,
+                         uint64_t nonce_out[2], uint64_t tag_out[2],
+                         uint8_t *ct_out, size_t ct_max_bytes,
+                         size_t *ct_bytes_out);
 
-bool ascon_decrypt_bytes(const uint8_t *ct, size_t ct_len,
-                         const uint8_t nonce[16], const uint8_t tag[16],
-                         uint8_t *pt_out, size_t pt_max,
-                         size_t *pt_len_out, size_t original_pt_len);
+bool ascon_decrypt_audio(const uint8_t *ct, size_t ct_bytes,
+                         const uint64_t nonce[2], const uint64_t tag[2],
+                         int16_t *samples_out, size_t max_samples,
+                         size_t *samples_out_count, size_t original_samples);
