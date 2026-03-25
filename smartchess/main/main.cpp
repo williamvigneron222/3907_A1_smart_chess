@@ -1,19 +1,26 @@
 #include "Arduino.h"
 #include "Preferences.h"
+#include "esp_system.h"
+//#include "esp32-rmt-ir.h"
 #include "esp_timer.h" // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/esp_timer.html
 #include "keyGen.h"
 #include "clock.h"
 
 
 // #include "adc.h"
-
 //#include "infrared.h"
 
 //128-bit key (16 bytes)
 static uint8_t key[16] = {0};
 
-//128-bit nonce (16 bytes), starts at every reboot for now
+//128-bit nonce (16 bytes), generates once every boot
 static uint8_t nonce[16] = {0};
+
+// External physical button on GPIO23
+static const int BUTTON_PIN = 23;
+
+// Tracks previous button state for edge detection
+static int last_button_state = HIGH;
 
 //helper function to print bytes in hex form (easy to debug)
 static void print_bytes(const char *label, const uint8_t *data, int len)
@@ -52,7 +59,7 @@ static void increment_nonce()
 
 void setup()
 {
-    Serial.begin(115200);
+    Serial.begin(115200); /// IFDEF DEBUG  ?
     // irSetup();
     delay(1000);
 
@@ -66,22 +73,25 @@ void setup()
     // Generating the key
     keygen_generate(key);
 
-    // Setting the nonce to all zeros, resets every boot
+    // Generate a random starting nonce once at boot using ESP32's built-in RNG
     for (int i = 0; i < 16; i++)
     {
-        nonce[i] = 0;
+        nonce[i] = (uint8_t)(esp_random() & 0xFF);
     }
 
     Serial.println("System initialized.");
     print_bytes("Generated key:  ", key, 16);
     print_bytes("Starting nonce: ", nonce, 16);
+
+    // Configure external button as input
+    // Not pressed = HIGH, pressed = LOW
+    pinMode(BUTTON_PIN, INPUT_PULLUP);
 }
+
 
 void loop()
 {
-    uint64_t h[4] = { 0 };
-    uint64_t m[2] = { 0, 1 }; // mlen 2
-    hash(m, 2, h);
+
     //if IR button is held
         // begin timer 2 seconds
     // if IR is held > 2 seconds:
@@ -91,6 +101,30 @@ void loop()
 
     // else listen to incoming signals
 
-    //
-    delay(100);
+    // Read current BOOT button state
+    int current_button_state = digitalRead(BUTTON_PIN);
+
+    // Detect a new button press (HIGH -> LOW transition)
+    if (last_button_state == HIGH && current_button_state == LOW)
+    {
+        Serial.println("Button pressed.");
+        print_bytes("Current nonce: ", nonce, 16);
+
+        increment_nonce();
+
+        print_bytes("Updated nonce: ", nonce, 16);
+
+        // Small debounce delay so one press does not trigger multiple times
+        delay(200);
+    }
+
+    // Save current state for next loop iteration
+    last_button_state = current_button_state;
+
+    delay(20);
+    
 }
+
+//the code generates the key once and the starting nonce once
+
+
