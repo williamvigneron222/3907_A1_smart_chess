@@ -1,0 +1,75 @@
+#include "Arduino.h"
+#include "driver/i2s.h"
+#include "driver/adc.h"
+#include "communication.h"
+
+// ====== PIN SETTINGS ======
+static const int BTN_PIN = 33;
+
+// ====== I2S / ADC ======
+static const i2s_port_t     I2S_MIC_PORT = I2S_NUM_0;
+static const adc1_channel_t ADC_CH       = ADC1_CHANNEL_6;  // GPIO34
+static const uint32_t       SAMPLE_RATE  = 8000;
+static const size_t         SAMPLES      = 80;  // must match PAYLOAD_MAX_SAMPLES
+
+// ====== BUFFERS ======
+static uint16_t raw[SAMPLES];      // raw ADC words from I2S DMA
+static int16_t  mic_buf[SAMPLES];  // converted PCM → passed to communication_send
+
+// ====== ADC CONVERSION ======
+static inline int16_t adc12_to_pcm16(uint16_t adc_word)
+{
+    uint16_t adc12    = adc_word & 0x0FFF;
+    static int32_t dc = 1970;
+    int32_t centered  = (int32_t)adc12 - dc;
+    return (int16_t)(centered << 4);
+}
+
+// ====== MIC SETUP ======
+void setup_i2s_mic()
+{
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC_CH, ADC_ATTEN_DB_11);
+
+    i2s_config_t cfg = {
+        .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_ADC_BUILT_IN),
+        .sample_rate = SAMPLE_RATE,
+        .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+        .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
+        .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+        .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
+        .dma_buf_count = 8,
+        .dma_buf_len = 64,
+        .use_apll = false,
+        .tx_desc_auto_clear = false,
+        .fixed_mclk = 0
+    };
+
+    if (i2s_driver_install(I2S_MIC_PORT, &cfg, 0, NULL) != ESP_OK) {
+        Serial.println("ERROR: mic i2s_driver_install failed");
+        while (true) {}
+    }
+
+    i2s_set_adc_mode(ADC_UNIT_1, ADC_CH);
+    i2s_adc_enable(I2S_MIC_PORT);
+    Serial.println("Mic I2S ready");
+}
+
+// ====== CALLED FROM main.cpp LOOP WHEN PTT HELD ======
+void firmware_sender_loop()
+{
+    if (digitalRead(BTN_PIN) == LOW) {
+        size_t bytes_read = 0;
+        esp_err_t err = i2s_read(I2S_MIC_PORT, raw, sizeof(raw),
+                                 &bytes_read, portMAX_DELAY);
+        if (err != ESP_OK) return;
+
+        size_t samples_read = bytes_read / sizeof(uint16_t);
+
+        for (size_t i = 0; i < samples_read; i++) {
+            mic_buf[i] = adc12_to_pcm16(raw[i]);
+        }
+
+        communication_send(mic_buf, samples_read);
+    }
+}

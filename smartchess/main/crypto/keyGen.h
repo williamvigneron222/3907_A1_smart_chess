@@ -3,12 +3,7 @@
 
 #include <stdint.h>
 
+void keygen_init();
+void keygen_generate(uint8_t key_out[16]);
 
-void getKey(uint64_t b[2]);
-
-void newKey();
-
-static const char *KEYNAME = "KEY";
-
-
-#endif /// KEYGEN_H
+#endif // KEYGEN_H
