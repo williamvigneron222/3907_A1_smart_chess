@@ -4,6 +4,7 @@
 #include "communication.h"
 #include "Arduino.h"
 
+
 // ====== USER SETTINGS ======
 static const uint32_t SAMPLE_RATE = 32000;
 
