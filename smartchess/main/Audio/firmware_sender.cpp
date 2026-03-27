@@ -2,12 +2,13 @@
 #include "driver/adc.h"
 #include "ASCON-AEAD128.h"
 #include "communication.h"
+#include "Arduino.h"
 
 // ====== USER SETTINGS ======
 static const i2s_port_t I2S_PORT = I2S_NUM_0;
 static const adc1_channel_t ADC_CH = ADC1_CHANNEL_6;  // GPIO34
 static const uint32_t SAMPLE_RATE = 32000;
-static const size_t READ_SAMPLES = 256;
+static const size_t READ_SAMPLES = 80;
 
 // ====== BUFFERS ======
 static uint16_t raw[READ_SAMPLES];
@@ -57,7 +58,7 @@ static void setup_i2s_adc() {
 }
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(115200);
   delay(200);
 
   setup_i2s_adc();

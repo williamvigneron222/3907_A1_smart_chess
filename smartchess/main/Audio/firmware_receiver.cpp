@@ -14,7 +14,7 @@ static const int SPK_LRC  = 25;
 static const int SPK_DOUT = 22;
 
 // Match your packet size / callback chunk size
-static const size_t MAX_RX_SAMPLES = 256;
+static const size_t MAX_RX_SAMPLES = 80;
 
 // Stereo buffer for MAX98357A output
 static int16_t stereo_buf[MAX_RX_SAMPLES * 2];
@@ -80,7 +80,7 @@ void on_audio_received(const int16_t *samples, size_t count)
 }
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(115200);
   delay(200);
 
   setup_i2s_speaker();
