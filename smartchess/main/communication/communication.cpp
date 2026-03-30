@@ -2,6 +2,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 #include "esp_event.h"
 #include "esp_log.h"
@@ -17,13 +18,14 @@
 
 static const char *TAG = "COMM";
 
-// !! Fill in peer MAC after flashing second ESP32 !!
-// Read "My STA MAC: XX:XX:XX:XX:XX:XX" from its serial monitor
-static uint8_t PEER_MAC[6] = { 0x94,0xb9,0x7e,0xe5,0x0f,0x40 };
+// !! PUT RECEIVER MAC HERE ON SENDER AND SENDER MAC HERE ON RECEIVER !!
+static uint8_t PEER_MAC[6] = { 0x00,0x00,0x00,0x00,0x00,0x00 };
 
 static bool          g_comm_ready = false;
 static uint16_t      g_seq        = 0;
 static audio_rx_cb_t g_rx_cb      = nullptr;
+static QueueHandle_t g_rx_queue   = nullptr;
+static volatile bool g_tx_done    = true;   
 
 // ─── Wi-Fi ────────────────────────────────────────────────────────────────────
 
@@ -54,47 +56,21 @@ static void espnow_recv_cb(const esp_now_recv_info_t *info,
         return;
     }
 
+    if (g_rx_queue == nullptr) return;
+
     enc_packet_t pkt;
     std::memcpy(&pkt, data, sizeof(pkt));
 
-    if (pkt.ct_bytes > PAYLOAD_MAX_BYTES ||
-        pkt.pt_samples > PAYLOAD_MAX_SAMPLES) {
-        ESP_LOGW(TAG, "Invalid packet sizes");
-        return;
-    }
-
-    int16_t samples[PAYLOAD_MAX_SAMPLES] = {};
-    size_t  recovered_samples = 0;
-
-    // Copy nonce and tag to aligned buffers to avoid unaligned pointer warning
-    uint64_t nonce[2], tag[2];
-    std::memcpy(nonce, pkt.nonce, sizeof(nonce));
-    std::memcpy(tag,   pkt.tag,   sizeof(tag));
-
-    bool ok = ascon_decrypt_audio(
-        pkt.payload,  pkt.ct_bytes,
-        nonce,        tag,
-        samples,      PAYLOAD_MAX_SAMPLES,
-        &recovered_samples, pkt.pt_samples
-    );
-
-    if (!ok) {
-        ESP_LOGW(TAG, "Decrypt failed / tag mismatch seq=%u", pkt.seq);
-        return;
-    }
-
-    ESP_LOGI(TAG, "RX OK seq=%u samples=%u", pkt.seq, (unsigned)recovered_samples);
-
-    if (g_rx_cb) {
-        g_rx_cb(samples, recovered_samples);
-    }
+    // Just queue the raw packet — do NOT decrypt here (interrupt context)
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    xQueueSendFromISR(g_rx_queue, &pkt, &xHigherPriorityTaskWoken);
 }
 
 static void espnow_send_cb(const wifi_tx_info_t *tx_info,
                            esp_now_send_status_t status)
 {
     (void)tx_info;
-    g_tx_done =true;
+    g_tx_done = true;   // ← NEW: signal ready for next packet
     ESP_LOGI(TAG, "TX %s", status == ESP_NOW_SEND_SUCCESS ? "OK" : "FAIL");
 }
 
@@ -176,6 +152,13 @@ void communication_setup(audio_rx_cb_t rx_callback)
 
     g_rx_cb = rx_callback;
 
+    // Create receive queue — holds up to 4 packets
+    g_rx_queue = xQueueCreate(4, sizeof(enc_packet_t));
+    if (g_rx_queue == nullptr) {
+        ESP_LOGE(TAG, "Failed to create RX queue");
+        return;
+    }
+
     esp_err_t ret = nvs_flash_init();
     if (ret != ESP_OK)
         ESP_LOGW(TAG, "nvs_flash_init: %s", esp_err_to_name(ret));
@@ -191,7 +174,9 @@ void communication_setup(audio_rx_cb_t rx_callback)
 void communication_send(const int16_t *samples, size_t num_samples)
 {
     if (!g_comm_ready || !samples || num_samples == 0) return;
-    if(!g_tx_done) return;
+
+    // ← NEW: wait for previous packet to be acknowledged
+    if (!g_tx_done) return;
 
     if (num_samples > PAYLOAD_MAX_SAMPLES) {
         ESP_LOGW(TAG, "Block too large: %u (max %d)",
@@ -204,8 +189,8 @@ void communication_send(const int16_t *samples, size_t num_samples)
     pkt.pt_samples = static_cast<uint16_t>(num_samples);
 
     size_t ct_bytes = 0;
-
     uint64_t nonce[2] = {}, tag[2] = {};
+
     bool ok = ascon_encrypt_audio(
         samples, num_samples, pkt.seq,
         nonce, tag,
@@ -219,7 +204,7 @@ void communication_send(const int16_t *samples, size_t num_samples)
     std::memcpy(pkt.tag,   tag,   sizeof(tag));
     pkt.ct_bytes = static_cast<uint16_t>(ct_bytes);
 
-    g_tx_done =false;
+    g_tx_done = false;  // ← NEW: mark as waiting for acknowledgement
 
     esp_err_t err = esp_now_send(PEER_MAC,
                                  reinterpret_cast<uint8_t*>(&pkt),
