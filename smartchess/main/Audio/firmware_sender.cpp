@@ -87,7 +87,7 @@ void loop() {
   size_t tx_count = 0;
 
   for (size_t i = 0; i < samples_read; i++) {
-    tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);
+    tx_buf[tx_count++] = raw[i];
   }
 
   for (size_t i = 0; i< 10; i++)

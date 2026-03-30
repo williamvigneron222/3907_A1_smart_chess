@@ -6,7 +6,7 @@ static const i2s_port_t I2S_PORT = I2S_NUM_0;
 static const adc1_channel_t ADC_CH = ADC1_CHANNEL_6;   // GPIO34
 
 static const uint32_t SAMPLE_RATE = 32000;
-static const size_t RECORD_SECONDS = 2;
+static const size_t RECORD_SECONDS = 1;
 static const size_t READ_SAMPLES = 256;
 
 static const int SPK_BCLK = 26;

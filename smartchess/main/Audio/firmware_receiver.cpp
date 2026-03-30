@@ -19,6 +19,16 @@ static const size_t MAX_RX_SAMPLES = 80;
 // Stereo buffer for MAX98357A output
 static int16_t stereo_buf[MAX_RX_SAMPLES * 2];
 
+static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
+  uint16_t adc12 = adc_word & 0x0FFF;
+
+  static int32_t dc = 2048;
+  dc = (63 * dc + adc12) / 64;   // slow DC tracking
+
+  int32_t centered = (int32_t)adc12 - dc;
+  return (int16_t)(centered << 5);
+}
+
 static void setup_i2s_speaker() {
   i2s_config_t spk_cfg = {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
@@ -66,8 +76,9 @@ void on_audio_received(const int16_t *samples, size_t count)
 
   // Duplicate mono samples into L and R for the MAX98357A
   for (size_t i = 0; i < count; i++) {
-    stereo_buf[2 * i]     = samples[i];
-    stereo_buf[2 * i + 1] = samples[i];
+    int16_t val = adc12_to_pcm16(samples[i]);
+    stereo_buf[2 * i]     = val;
+    stereo_buf[2 * i + 1] = val;
   }
 
   for (size_t i = 0; i < 15; i++)
