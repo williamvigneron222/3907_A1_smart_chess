@@ -19,7 +19,9 @@ static const char *TAG = "COMM";
 
 // !! Fill in peer MAC after flashing second ESP32 !!
 // Read "My STA MAC: XX:XX:XX:XX:XX:XX" from its serial monitor
-static uint8_t PEER_MAC[6] = { 0x00,0x00,0x00,0x00,0x00,0x00 };
+// 94:b9:7e:e5:b7:d4 SENDER MAC
+// 94:b9:7e:e5:0f:40 RECEIVER MAC
+static uint8_t PEER_MAC[6] = { 0x94, 0xb9, 0x7e, 0xe5, 0x0f, 0x40 };
 
 static bool          g_comm_ready = false;
 static uint16_t      g_seq        = 0;
