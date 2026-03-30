@@ -7,10 +7,12 @@ idf_component_register(
         "communication/crypto_wrap.cpp"
         "crypto/ASCON-AEAD128.c"
         "crypto/ASCON-HASH256.c"
+        # "ir/infrared.cpp"
        
     INCLUDE_DIRS
         "."
         "communication"
         "crypto"
         "Audio"
+        # "ir"
 )

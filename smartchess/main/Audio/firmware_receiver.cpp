@@ -76,7 +76,7 @@ void on_audio_received(const int16_t *samples, size_t count)
 
   // Duplicate mono samples into L and R for the MAX98357A
   for (size_t i = 0; i < count; i++) {
-    int16_t val = adc12_to_pcm16(samples[i]);
+    int16_t val = adc12_to_pcm16((uint16_t)samples[i]);
     stereo_buf[2 * i]     = val;
     stereo_buf[2 * i + 1] = val;
   }
