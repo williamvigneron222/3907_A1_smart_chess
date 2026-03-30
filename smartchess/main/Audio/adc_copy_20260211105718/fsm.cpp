@@ -255,6 +255,13 @@ static void speaker_play_task(void *pvParameters) {
   speakerTaskHandle = nullptr;
   vTaskDelete(NULL);
 }
+static void HardwareGen_IR(void *pvParameters) 
+{
+
+  
+}
+
+
 
 // ============================================================
 // MODE CONTROL
