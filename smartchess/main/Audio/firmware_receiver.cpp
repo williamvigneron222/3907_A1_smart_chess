@@ -14,7 +14,7 @@ static const int SPK_LRC  = 25;
 static const int SPK_DOUT = 22;
 
 // Match your packet size / callback chunk size
-static const size_t MAX_RX_SAMPLES = 256;
+static const size_t MAX_RX_SAMPLES = 80;
 
 // Stereo buffer for MAX98357A output
 static int16_t stereo_buf[MAX_RX_SAMPLES * 2];
@@ -28,7 +28,7 @@ static void setup_i2s_speaker() {
     .communication_format = I2S_COMM_FORMAT_I2S_MSB,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
     .dma_buf_count = 8,
-    .dma_buf_len = 256,
+    .dma_buf_len = 80,
     .use_apll = false,
     .tx_desc_auto_clear = true,
     .fixed_mclk = 0
@@ -54,6 +54,7 @@ static void setup_i2s_speaker() {
   i2s_zero_dma_buffer(I2S_SPK);
 }
 
+
 // This gets called automatically when a valid packet is received + decrypted
 void on_audio_received(const int16_t *samples, size_t count)
 {
@@ -67,6 +68,11 @@ void on_audio_received(const int16_t *samples, size_t count)
   for (size_t i = 0; i < count; i++) {
     stereo_buf[2 * i]     = samples[i];
     stereo_buf[2 * i + 1] = samples[i];
+  }
+
+  for (size_t i = 0; i < 15; i++)
+  {
+    Serial.println(stereo_buf[i]);
   }
 
   size_t bytes_written = 0;
@@ -94,4 +100,6 @@ void setup() {
 void loop() {
   // ESP-NOW RX happens through callback
   communication_loop();
+  vTaskDelay(1);
+  
 }

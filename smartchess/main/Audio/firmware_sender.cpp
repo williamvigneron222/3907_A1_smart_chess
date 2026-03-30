@@ -2,12 +2,13 @@
 #include "driver/adc.h"
 #include "ASCON-AEAD128.h"
 #include "communication.h"
+#include "Arduino.h"
 
 // ====== USER SETTINGS ======
 static const i2s_port_t I2S_PORT = I2S_NUM_0;
 static const adc1_channel_t ADC_CH = ADC1_CHANNEL_6;  // GPIO34
 static const uint32_t SAMPLE_RATE = 32000;
-static const size_t READ_SAMPLES = 256;
+static const size_t READ_SAMPLES = 80;
 
 // ====== BUFFERS ======
 static uint16_t raw[READ_SAMPLES];
@@ -20,7 +21,7 @@ static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   dc = (63 * dc + adc12) / 64;   // slow DC tracking
 
   int32_t centered = (int32_t)adc12 - dc;
-  return (int16_t)(centered << 4);
+  return (int16_t)(centered << 5);
 }
 
 // Dummy RX callback for now
@@ -41,7 +42,7 @@ static void setup_i2s_adc() {
     .communication_format = I2S_COMM_FORMAT_I2S_MSB,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
     .dma_buf_count = 8,
-    .dma_buf_len = 256,
+    .dma_buf_len = 80,
     .use_apll = false,
     .tx_desc_auto_clear = false,
     .fixed_mclk = 0
@@ -57,7 +58,7 @@ static void setup_i2s_adc() {
 }
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(115200);
   delay(200);
 
   setup_i2s_adc();
@@ -65,9 +66,20 @@ void setup() {
 }
 
 void loop() {
+  // Rate limit — one packet every 10ms
+  static uint32_t last_send_ms = 0;
+  uint32_t now = millis();
+  if (now - last_send_ms < 10) {
+    vTaskDelay(1);  // feed watchdog while waiting
+    return;
+  }
+
   size_t bytes_read = 0;
-  esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, portMAX_DELAY);
-  if (err != ESP_OK) return;
+  esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, 0); // 0 = non-blocking
+  if (err != ESP_OK || bytes_read == 0) {
+    vTaskDelay(1);  // feed watchdog if no data
+    return;
+  }
 
   size_t samples_read = bytes_read / sizeof(uint16_t);
 
@@ -78,7 +90,13 @@ void loop() {
     tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);
   }
 
+  for (size_t i = 0; i< 10; i++)
+  {
+    Serial.println(tx_buf[i]);
+  }
+
   if (tx_count > 0) {
     communication_send(tx_buf, tx_count);
+    last_send_ms = now;
   }
 }
