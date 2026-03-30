@@ -94,6 +94,7 @@ static void espnow_send_cb(const wifi_tx_info_t *tx_info,
                            esp_now_send_status_t status)
 {
     (void)tx_info;
+    g_tx_done =true;
     ESP_LOGI(TAG, "TX %s", status == ESP_NOW_SEND_SUCCESS ? "OK" : "FAIL");
 }
 
@@ -190,6 +191,7 @@ void communication_setup(audio_rx_cb_t rx_callback)
 void communication_send(const int16_t *samples, size_t num_samples)
 {
     if (!g_comm_ready || !samples || num_samples == 0) return;
+    if(!g_tx_done) return;
 
     if (num_samples > PAYLOAD_MAX_SAMPLES) {
         ESP_LOGW(TAG, "Block too large: %u (max %d)",
@@ -217,14 +219,56 @@ void communication_send(const int16_t *samples, size_t num_samples)
     std::memcpy(pkt.tag,   tag,   sizeof(tag));
     pkt.ct_bytes = static_cast<uint16_t>(ct_bytes);
 
+    g_tx_done =false;
+
     esp_err_t err = esp_now_send(PEER_MAC,
                                  reinterpret_cast<uint8_t*>(&pkt),
                                  sizeof(pkt));
-    if (err != ESP_OK)
+    if (err != ESP_OK) {
+        g_tx_done = true;  // ← NEW: reset on error so we can retry
         ESP_LOGE(TAG, "esp_now_send failed: %s", esp_err_to_name(err));
+    }
 }
+
+// ─── Process received packets from safe main loop context ────────────────────
 
 void communication_loop()
 {
-    // ESP-NOW receive is interrupt-driven via espnow_recv_cb
+    if (g_rx_queue == nullptr) return;
+
+    enc_packet_t pkt;
+    while (xQueueReceive(g_rx_queue, &pkt, 0) == pdTRUE) {
+
+        if (pkt.ct_bytes > PAYLOAD_MAX_BYTES ||
+            pkt.pt_samples > PAYLOAD_MAX_SAMPLES) {
+            ESP_LOGW(TAG, "Invalid packet sizes");
+            continue;
+        }
+
+        int16_t samples[PAYLOAD_MAX_SAMPLES] = {};
+        size_t  recovered_samples = 0;
+
+        uint64_t nonce[2], tag[2];
+        std::memcpy(nonce, pkt.nonce, sizeof(nonce));
+        std::memcpy(tag,   pkt.tag,   sizeof(tag));
+
+        bool ok = ascon_decrypt_audio(
+            pkt.payload,  pkt.ct_bytes,
+            nonce,        tag,
+            samples,      PAYLOAD_MAX_SAMPLES,
+            &recovered_samples, pkt.pt_samples
+        );
+
+        if (!ok) {
+            ESP_LOGW(TAG, "Decrypt failed / tag mismatch seq=%u", pkt.seq);
+            continue;
+        }
+
+        ESP_LOGI(TAG, "RX OK seq=%u samples=%u",
+                 pkt.seq, (unsigned)recovered_samples);
+
+        if (g_rx_cb) {
+            g_rx_cb(samples, recovered_samples);
+        }
+    }
 }
