@@ -25,7 +25,7 @@ static bool          g_comm_ready = false;
 static uint16_t      g_seq        = 0;
 static audio_rx_cb_t g_rx_cb      = nullptr;
 static QueueHandle_t g_rx_queue   = nullptr;
-static volatile bool g_tx_done    = true;   
+static volatile bool g_tx_done    = true;
 
 // ─── Wi-Fi ────────────────────────────────────────────────────────────────────
 
@@ -61,17 +61,61 @@ static void espnow_recv_cb(const esp_now_recv_info_t *info,
     enc_packet_t pkt;
     std::memcpy(&pkt, data, sizeof(pkt));
 
-    // Just queue the raw packet — do NOT decrypt here (interrupt context)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     xQueueSendFromISR(g_rx_queue, &pkt, &xHigherPriorityTaskWoken);
+    if (xHigherPriorityTaskWoken) portYIELD_FROM_ISR();
 }
 
 static void espnow_send_cb(const wifi_tx_info_t *tx_info,
                            esp_now_send_status_t status)
 {
     (void)tx_info;
-    g_tx_done = true;   // ← NEW: signal ready for next packet
+    g_tx_done = true;
     ESP_LOGI(TAG, "TX %s", status == ESP_NOW_SEND_SUCCESS ? "OK" : "FAIL");
+}
+
+// ─── RX processing task ───────────────────────────────────────────────────────
+
+static void rx_task(void *arg)
+{
+    enc_packet_t pkt;
+
+    while (true) {
+        // Block until a packet arrives in the queue
+        if (xQueueReceive(g_rx_queue, &pkt, portMAX_DELAY) != pdTRUE) continue;
+
+        if (pkt.ct_bytes > PAYLOAD_MAX_BYTES ||
+            pkt.pt_samples > PAYLOAD_MAX_SAMPLES) {
+            ESP_LOGW(TAG, "Invalid packet sizes");
+            continue;
+        }
+
+        int16_t samples[PAYLOAD_MAX_SAMPLES] = {};
+        size_t  recovered_samples = 0;
+
+        uint64_t nonce[2], tag[2];
+        std::memcpy(nonce, pkt.nonce, sizeof(nonce));
+        std::memcpy(tag,   pkt.tag,   sizeof(tag));
+
+        bool ok = ascon_decrypt_audio(
+            pkt.payload,  pkt.ct_bytes,
+            nonce,        tag,
+            samples,      PAYLOAD_MAX_SAMPLES,
+            &recovered_samples, pkt.pt_samples
+        );
+
+        if (!ok) {
+            ESP_LOGW(TAG, "Decrypt failed seq=%u", pkt.seq);
+            continue;
+        }
+
+        ESP_LOGI(TAG, "RX OK seq=%u samples=%u",
+                 pkt.seq, (unsigned)recovered_samples);
+
+        if (g_rx_cb) {
+            g_rx_cb(samples, recovered_samples);
+        }
+    }
 }
 
 // ─── Init helpers ─────────────────────────────────────────────────────────────
@@ -152,12 +196,24 @@ void communication_setup(audio_rx_cb_t rx_callback)
 
     g_rx_cb = rx_callback;
 
-    // Create receive queue — holds up to 4 packets
-    g_rx_queue = xQueueCreate(4, sizeof(enc_packet_t));
+    // Create receive queue — holds up to 8 packets
+    g_rx_queue = xQueueCreate(8, sizeof(enc_packet_t));
     if (g_rx_queue == nullptr) {
         ESP_LOGE(TAG, "Failed to create RX queue");
         return;
     }
+
+    // Create dedicated RX processing task on core 1
+    // Firmware runs on core 0, this runs on core 1 — no conflict
+    xTaskCreatePinnedToCore(
+        rx_task,        // function
+        "rx_task",      // name
+        4096,           // stack size
+        nullptr,        // args
+        5,              // priority
+        nullptr,        // handle
+        1               // core 1
+    );
 
     esp_err_t ret = nvs_flash_init();
     if (ret != ESP_OK)
@@ -174,8 +230,6 @@ void communication_setup(audio_rx_cb_t rx_callback)
 void communication_send(const int16_t *samples, size_t num_samples)
 {
     if (!g_comm_ready || !samples || num_samples == 0) return;
-
-    // ← NEW: wait for previous packet to be acknowledged
     if (!g_tx_done) return;
 
     if (num_samples > PAYLOAD_MAX_SAMPLES) {
@@ -204,56 +258,19 @@ void communication_send(const int16_t *samples, size_t num_samples)
     std::memcpy(pkt.tag,   tag,   sizeof(tag));
     pkt.ct_bytes = static_cast<uint16_t>(ct_bytes);
 
-    g_tx_done = false;  // ← NEW: mark as waiting for acknowledgement
+    g_tx_done = false;
 
     esp_err_t err = esp_now_send(PEER_MAC,
                                  reinterpret_cast<uint8_t*>(&pkt),
                                  sizeof(pkt));
     if (err != ESP_OK) {
-        g_tx_done = true;  // ← NEW: reset on error so we can retry
+        g_tx_done = true;
         ESP_LOGE(TAG, "esp_now_send failed: %s", esp_err_to_name(err));
     }
 }
 
-// ─── Process received packets from safe main loop context ────────────────────
-
+// communication_loop is now empty — rx_task handles everything
 void communication_loop()
 {
-    if (g_rx_queue == nullptr) return;
-
-    enc_packet_t pkt;
-    while (xQueueReceive(g_rx_queue, &pkt, 0) == pdTRUE) {
-
-        if (pkt.ct_bytes > PAYLOAD_MAX_BYTES ||
-            pkt.pt_samples > PAYLOAD_MAX_SAMPLES) {
-            ESP_LOGW(TAG, "Invalid packet sizes");
-            continue;
-        }
-
-        int16_t samples[PAYLOAD_MAX_SAMPLES] = {};
-        size_t  recovered_samples = 0;
-
-        uint64_t nonce[2], tag[2];
-        std::memcpy(nonce, pkt.nonce, sizeof(nonce));
-        std::memcpy(tag,   pkt.tag,   sizeof(tag));
-
-        bool ok = ascon_decrypt_audio(
-            pkt.payload,  pkt.ct_bytes,
-            nonce,        tag,
-            samples,      PAYLOAD_MAX_SAMPLES,
-            &recovered_samples, pkt.pt_samples
-        );
-
-        if (!ok) {
-            ESP_LOGW(TAG, "Decrypt failed / tag mismatch seq=%u", pkt.seq);
-            continue;
-        }
-
-        ESP_LOGI(TAG, "RX OK seq=%u samples=%u",
-                 pkt.seq, (unsigned)recovered_samples);
-
-        if (g_rx_cb) {
-            g_rx_cb(samples, recovered_samples);
-        }
-    }
+    vTaskDelay(1);  // just feed the watchdog
 }
