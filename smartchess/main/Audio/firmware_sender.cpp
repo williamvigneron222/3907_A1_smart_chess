@@ -17,12 +17,18 @@ static uint16_t raw[READ_SAMPLES];
 static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   uint16_t adc12 = adc_word & 0x0FFF;
 
-  static int32_t dc = 2048;
-  dc = (63 * dc + adc12) / 64;   // slow DC tracking
+  static int32_t dc = 1900;
+  //dc = (255 * dc + adc12) / 256;
 
   int32_t centered = (int32_t)adc12 - dc;
-  return (int16_t)(centered << 5);
+  int32_t pcm32 = centered << 5;
+
+  if (pcm32 > 32767) pcm32 = 32767;
+  if (pcm32 < -32768) pcm32 = -32768;
+
+  return (int16_t)pcm32;
 }
+
 
 // Dummy RX callback for now
 void on_audio_received(const int16_t *samples, size_t num_samples)
@@ -87,13 +93,13 @@ void loop() {
   size_t tx_count = 0;
 
   for (size_t i = 0; i < samples_read; i++) {
-    tx_buf[tx_count++] = raw[i] & 0xFFF;
+    tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);
   }
 
-  for (size_t i = 0; i< 10; i++)
-  {
-    Serial.println(tx_buf[i]);
-  }
+  // for (size_t i = 0; i< 10; i++)
+  // {
+  //   Serial.println(tx_buf[i]);
+  // }
 
   if (tx_count > 0) {
     communication_send(tx_buf, tx_count);

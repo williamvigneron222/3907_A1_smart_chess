@@ -19,8 +19,8 @@ static const size_t MAX_RX_SAMPLES = 80;
 // Stereo buffer for MAX98357A output
 static int16_t stereo_buf[MAX_RX_SAMPLES * 2];
 
-static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
-  uint16_t adc12 = adc_word & 0x0FFF;
+static inline int16_t adc12_to_pcm16(int16_t adc_word) {
+  int16_t adc12 = adc_word & 0x0FFF;
 
   static int32_t dc = 2048;
   dc = (63 * dc + adc12) / 64;   // slow DC tracking
@@ -76,15 +76,14 @@ void on_audio_received(const int16_t *samples, size_t count)
 
   // Duplicate mono samples into L and R for the MAX98357A
   for (size_t i = 0; i < count; i++) {
-    int16_t val = adc12_to_pcm16((uint16_t)samples[i]);
-    stereo_buf[2 * i]     = val;
-    stereo_buf[2 * i + 1] = val;
+    stereo_buf[2 * i]     = samples[i];
+    stereo_buf[2 * i + 1] = samples[i];
   }
 
-  for (size_t i = 0; i < 15; i++)
-  {
-    Serial.println(stereo_buf[i]);
-  }
+  // for (size_t i = 0; i < 15; i++)
+  // {
+  //   Serial.println(stereo_buf[i]);
+  // }
 
   size_t bytes_written = 0;
   i2s_write(
