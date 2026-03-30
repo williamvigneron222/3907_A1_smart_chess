@@ -13,21 +13,15 @@ static const int SPK_BCLK = 26;
 static const int SPK_LRC  = 25;
 static const int SPK_DOUT = 22;
 
-// Match your packet size / callback chunk size
 static const size_t MAX_RX_SAMPLES = 80;
 
 // Stereo buffer for MAX98357A output
 static int16_t stereo_buf[MAX_RX_SAMPLES * 2];
 
-static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
-  uint16_t adc12 = adc_word & 0x0FFF;
-
-  static int32_t dc = 2048;
-  dc = (63 * dc + adc12) / 64;   // slow DC tracking
-
-  int32_t centered = (int32_t)adc12 - dc;
-  return (int16_t)(centered << 5);
-}
+// Audio queue — safe buffering from rx_task context
+static int16_t       audio_queue[MAX_RX_SAMPLES];
+static size_t        audio_queue_count = 0;
+static volatile bool audio_ready       = false;
 
 static void setup_i2s_speaker() {
   i2s_config_t spk_cfg = {
@@ -64,36 +58,17 @@ static void setup_i2s_speaker() {
   i2s_zero_dma_buffer(I2S_SPK);
 }
 
-
-// This gets called automatically when a valid packet is received + decrypted
+// Called from rx_task — just buffer, no i2s_write here
 void on_audio_received(const int16_t *samples, size_t count)
 {
   if (!samples || count == 0) return;
+  if (count > MAX_RX_SAMPLES) count = MAX_RX_SAMPLES;
 
-  if (count > MAX_RX_SAMPLES) {
-    count = MAX_RX_SAMPLES;
-  }
-
-  // Duplicate mono samples into L and R for the MAX98357A
-  for (size_t i = 0; i < count; i++) {
-    int16_t val = adc12_to_pcm16((uint16_t)samples[i]);
-    stereo_buf[2 * i]     = val;
-    stereo_buf[2 * i + 1] = val;
-  }
-
-  for (size_t i = 0; i < 15; i++)
-  {
-    Serial.println(stereo_buf[i]);
-  }
-
-  size_t bytes_written = 0;
-  i2s_write(
-    I2S_SPK,
-    stereo_buf,
-    count * 2 * sizeof(int16_t),
-    &bytes_written,
-    portMAX_DELAY
-  );
+  // Use samples directly — already converted PCM from sender
+  // ← fixed: removed double adc12_to_pcm16 conversion
+  memcpy(audio_queue, samples, count * sizeof(int16_t));
+  audio_queue_count = count;
+  audio_ready       = true;
 }
 
 void setup() {
@@ -101,16 +76,29 @@ void setup() {
   delay(200);
 
   setup_i2s_speaker();
-
-  // Register callback with communication layer
   communication_setup(on_audio_received);
 
   Serial.println("Receiver ready");
 }
 
 void loop() {
-  // ESP-NOW RX happens through callback
-  communication_loop();
-  vTaskDelay(1);
-  
+  communication_loop();  // just vTaskDelay(1) now
+
+  if (audio_ready) {
+    audio_ready = false;
+
+    for (size_t i = 0; i < audio_queue_count; i++) {
+      stereo_buf[2 * i]     = audio_queue[i];   // ← fixed: no conversion
+      stereo_buf[2 * i + 1] = audio_queue[i];
+    }
+
+    size_t bytes_written = 0;
+    i2s_write(
+      I2S_SPK,
+      stereo_buf,
+      audio_queue_count * 2 * sizeof(int16_t),
+      &bytes_written,
+      portMAX_DELAY
+    );
+  }
 }

@@ -18,16 +18,17 @@ static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   uint16_t adc12 = adc_word & 0x0FFF;
 
   static int32_t dc = 2048;
-  dc = (63 * dc + adc12) / 64;   // slow DC tracking
+  dc = (63 * dc + adc12) / 64;
 
   int32_t centered = (int32_t)adc12 - dc;
-  return (int16_t)(centered << 5);
+  return (int16_t)(centered << 4);   // ← fixed: was << 5
 }
 
 // Dummy RX callback for now
 void on_audio_received(const int16_t *samples, size_t num_samples)
 {
-  // Do nothing for now
+  (void)samples;
+  (void)num_samples;
 }
 
 static void setup_i2s_adc() {
@@ -66,18 +67,17 @@ void setup() {
 }
 
 void loop() {
-  // Rate limit — one packet every 10ms
   static uint32_t last_send_ms = 0;
   uint32_t now = millis();
   if (now - last_send_ms < 10) {
-    vTaskDelay(1);  // feed watchdog while waiting
+    vTaskDelay(1);
     return;
   }
 
   size_t bytes_read = 0;
-  esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, 0); // 0 = non-blocking
+  esp_err_t err = i2s_read(I2S_PORT, raw, sizeof(raw), &bytes_read, 0);
   if (err != ESP_OK || bytes_read == 0) {
-    vTaskDelay(1);  // feed watchdog if no data
+    vTaskDelay(1);
     return;
   }
 
@@ -87,12 +87,7 @@ void loop() {
   size_t tx_count = 0;
 
   for (size_t i = 0; i < samples_read; i++) {
-    tx_buf[tx_count++] = raw[i] & 0xFFF;
-  }
-
-  for (size_t i = 0; i< 10; i++)
-  {
-    Serial.println(tx_buf[i]);
+    tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);  // ← fixed: was raw[i] & 0xFFF
   }
 
   if (tx_count > 0) {
