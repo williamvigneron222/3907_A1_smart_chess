@@ -24,6 +24,7 @@ static inline int16_t adc12_to_pcm16(uint16_t adc_word) {
   return (int16_t)(centered << 4);   // ← fixed: was << 5
 }
 
+
 // Dummy RX callback for now
 void on_audio_received(const int16_t *samples, size_t num_samples)
 {
@@ -87,7 +88,7 @@ void loop() {
   size_t tx_count = 0;
 
   for (size_t i = 0; i < samples_read; i++) {
-    tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);  // ← fixed: was raw[i] & 0xFFF
+    tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);  
   }
 
   if (tx_count > 0) {
