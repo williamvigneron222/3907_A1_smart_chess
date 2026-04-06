@@ -96,10 +96,10 @@ void loop() {
     tx_buf[tx_count++] = adc12_to_pcm16(raw[i]);
   }
 
-  // for (size_t i = 0; i< 10; i++)
-  // {
-  //   Serial.println(tx_buf[i]);
-  // }
+  for (size_t i = 0; i< 10; i++)
+  {
+    Serial.println(tx_buf[i]);
+  }
 
   if (tx_count > 0) {
     communication_send(tx_buf, tx_count);

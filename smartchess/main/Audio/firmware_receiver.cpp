@@ -80,10 +80,10 @@ void on_audio_received(const int16_t *samples, size_t count)
     stereo_buf[2 * i + 1] = samples[i];
   }
 
-  // for (size_t i = 0; i < 15; i++)
-  // {
-  //   Serial.println(stereo_buf[i]);
-  // }
+  for (size_t i = 0; i < 15; i++)
+  {
+    Serial.println(stereo_buf[i]);
+  }
 
   size_t bytes_written = 0;
   i2s_write(
