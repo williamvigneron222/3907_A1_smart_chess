@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS
     #    "infrared.c"
-    "fsm.cpp"
+    "demofsm.cpp"
     "crypto/keyGen.cpp"
     "crypto/clock.cpp"
     "crypto/ASCON-AEAD128.c"

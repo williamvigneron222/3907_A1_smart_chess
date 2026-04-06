@@ -553,12 +553,14 @@ static void sendKeyChunk(uint8_t chunk) {
 }
 
 static void sendEntireKeyBurst() {
-  sendPairStartPacket();
-  delay(80);
+  for (int i = 0; i < 3; i++) {
+    sendPairStartPacket();
+    delay(120);
+  }
 
   for (uint8_t i = 0; i < 8; i++) {
     sendKeyChunk(i);
-    delay(80);
+    delay(120);
   }
 }
 
