@@ -69,6 +69,30 @@ void on_audio_received(const int16_t *samples, size_t count)
   memcpy(audio_queue, samples, count * sizeof(int16_t));
   audio_queue_count = count;
   audio_ready       = true;
+
+  if (count > MAX_RX_SAMPLES) {
+    count = MAX_RX_SAMPLES;
+  }
+
+  // Duplicate mono samples into L and R for the MAX98357A
+  for (size_t i = 0; i < count; i++) {
+    stereo_buf[2 * i]     = samples[i];
+    stereo_buf[2 * i + 1] = samples[i];
+  }
+
+  for (size_t i = 0; i < 15; i++)
+  {
+    Serial.println(stereo_buf[i]);
+  }
+
+  size_t bytes_written = 0;
+  i2s_write(
+    I2S_SPK,
+    stereo_buf,
+    count * 2 * sizeof(int16_t),
+    &bytes_written,
+    portMAX_DELAY
+  );
 }
 
 void setup() {
